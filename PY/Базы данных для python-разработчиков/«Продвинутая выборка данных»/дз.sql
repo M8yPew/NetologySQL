@@ -175,7 +175,7 @@ VALUES((SELECT UUID FROM albums WHERE name ='Альбом 1'), (SELECT UUID FROM
 		((SELECT UUID FROM albums WHERE name ='Альбом 5'), (SELECT UUID FROM performers WHERE name ='Paramore')),
 		((SELECT UUID FROM albums WHERE name ='Альбом 6'), (SELECT UUID FROM performers WHERE name ='Че́стер')),
 		((SELECT UUID FROM albums WHERE name ='Альбом 7'), (SELECT UUID FROM performers WHERE name ='Михаил Круг')),
-		((SELECT UUID FROM albums WHERE name ='Альбом 8'), (SELECT UUID FROM performers WHERE name ='Slipknot'))
+		((SELECT UUID FROM albums WHERE name ='Альбом 8'), (SELECT UUID FROM performers WHERE name ='Slipknot'));
 		
 		
 -- Задание 2 ------------------------------------
@@ -185,7 +185,7 @@ SELECT
 	name,
 	YEAR 
 FROM albums
-WHERE date_part('year', albums."year") = 2018
+WHERE date_part('year', albums."year") = 2018;
 
 -- 2 Название и продолжительность самого длительного трека.
 SELECT 
@@ -193,32 +193,32 @@ SELECT
 	INTERVAL
 FROM tracks 
 ORDER BY tracks."interval" 
-LIMIT 1
+LIMIT 1;
 
 -- 3 Название треков, продолжительность которых не менее 3,5 минут.
 -- ну как бэ с учётом рандома результат непредсказуем )
 SELECT 
 	name
 FROM tracks
-WHERE tracks."interval" > (3.5*60)
+WHERE tracks."interval" > (3.5*60);
 
 -- 4 Названия сборников, вышедших в период с 2018 по 2020 год включительно.
 SELECT 
 	name
 FROM compilations
-WHERE compilations."year" BETWEEN date('2018-01-01') AND date('2020-12-31')
+WHERE compilations."year" BETWEEN date('2018-01-01') AND date('2020-12-31');
 
 -- 5 Исполнители, чьё имя состоит из одного слова
 SELECT 
 	name
 FROM performers
-WHERE (SELECT position(' ' in name)) = 0
+WHERE (SELECT position(' ' in name)) = 0;
 
 -- 6 Название треков, которые содержат слово «мой» или «my».
 SELECT 
 	name 
 FROM tracks
-WHERE name LIKE '%Мой%'
+WHERE name LIKE '%Мой%';
 
 
 
@@ -231,14 +231,14 @@ SELECT
 	count(*) AS "Количество исполнителей"	
 FROM performersgenres
 LEFT JOIN genres ON performersgenres.genre = genres.uuid 
-GROUP BY genres.name
+GROUP BY genres.name;
 
 -- Количество треков, вошедших в альбомы 2019–2020 годов.
 SELECT 
 	count(*)
 FROM tracks
 LEFT JOIN albums ON tracks.album = albums.uuid
-WHERE albums."year" BETWEEN date('2019-01-01') AND date('2020-12-31')  
+WHERE albums."year" BETWEEN date('2019-01-01') AND date('2020-12-31');  
 
 -- Средняя продолжительность треков по каждому альбому.
 SELECT 
@@ -246,15 +246,20 @@ SELECT
 	avg(tracks.interval) AS "Средняя продолжительность трека"
 FROM tracks
 LEFT JOIN albums ON tracks.album = albums.uuid
-GROUP BY albums."name"
+GROUP BY albums."name";
 
 -- Все исполнители, которые не выпустили альбомы в 2020 году.
 SELECT 
 	performers."name" 
 FROM performers
-LEFT JOIN performersalbums ON performersalbums.performer = performers.uuid 
-LEFT JOIN albums ON performersalbums.album = albums.uuid 
-WHERE date_part('YEAR', albums."year") <> '2020' 
+WHERE performers."name" NOT IN (
+	SELECT 
+		performers.name
+	FROM performers
+	LEFT JOIN performersalbums ON performersalbums.performer = performers.uuid 
+	LEFT JOIN albums ON performersalbums.album = albums.uuid 
+	WHERE date_part('YEAR', albums."year") = '2020'
+	); 
 
 -- Названия сборников, в которых присутствует конкретный исполнитель (выберите его сами).
 WITH cte_performer as
@@ -272,7 +277,7 @@ SELECT
 FROM cte_performer
 LEFT JOIN tracks ON cte_performer.album = tracks.album 
 LEFT JOIN tracksincollection ON tracks.uuid = tracksincollection.track 
-LEFT JOIN compilations ON tracksincollection.compilation = compilations.uuid  
+LEFT JOIN compilations ON tracksincollection.compilation = compilations.uuid;  
 
 -- Названия альбомов, в которых присутствуют исполнители более чем одного жанра.
 WITH cte_perfomer_genre AS
@@ -288,13 +293,13 @@ SELECT
 	albums.name
 FROM cte_perfomer_genre
 LEFT JOIN performersAlbums ON cte_perfomer_genre.performer = performersAlbums.performer 
-LEFT JOIN albums ON performersAlbums.album = albums.uuid 
+LEFT JOIN albums ON performersAlbums.album = albums.uuid; 
 
 -- Наименования треков, которые не входят в сборники.
 SELECT 
 	tracks."name"
 FROM tracks 
-WHERE tracks.uuid NOT IN (SELECT tracksincollection.track FROM tracksincollection)
+WHERE tracks.uuid NOT IN (SELECT tracksincollection.track FROM tracksincollection);
 
 -- Исполнитель или исполнители, написавшие самый короткий по продолжительности трек, — теоретически таких треков может быть несколько.
 SELECT
@@ -302,20 +307,23 @@ SELECT
 FROM performers
 LEFT JOIN performersAlbums ON performers.uuid = performersAlbums.performer 
 LEFT JOIN tracks ON performersAlbums.album = tracks.album 
-WHERE tracks."interval" = (SELECT min(INTERVAL) FROM tracks)
+WHERE tracks."interval" = (SELECT min(INTERVAL) FROM tracks);
 
 -- Названия альбомов, содержащих наименьшее количество треков.
-WITH cte_trackscount AS
-(
+SELECT 
+	albums."name" 
+FROM albums
+JOIN tracks ON albums.uuid = tracks.album
+GROUP BY albums."name" 
+HAVING count(tracks.uuid) = (
 	SELECT 
-		albums."name",
-		count(tracks.uuid) AS count
-	FROM tracks 
-	LEFT JOIN albums ON tracks.album = albums."name"
-	GROUP BY albums."name" 
-)
-
-
+		count(tracks.uuid) 
+	FROM albums
+	JOIN tracks ON albums.uuid = tracks.album
+	GROUP BY albums."name"
+	ORDER BY count(tracks.uuid) DESC  
+	LIMIT 1
+); 
 
 
 
